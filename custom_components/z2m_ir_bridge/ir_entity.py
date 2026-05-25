@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from homeassistant.components.infrared import InfraredEntity
@@ -10,6 +11,8 @@ from homeassistant.core import HomeAssistant
 
 from .const import DEFAULT_BASE_TOPIC, DOMAIN
 from .mqtt_helpers import build_payload, build_topic
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Z2MInfraredEntity(InfraredEntity):
@@ -62,6 +65,12 @@ class Z2MInfraredEntity(InfraredEntity):
             base_topic=self._base_topic,
         )
         payload = build_payload(command)
+        _LOGGER.debug(
+            "Publishing IR command to %s from %s as %d payload bytes",
+            topic,
+            type(command).__name__,
+            len(payload),
+        )
 
         for _ in range(max(1, repeat)):
             await self.hass.services.async_call(
