@@ -38,6 +38,16 @@ For most ZS06/Tuya IR devices with the Zosung quirk, the defaults are:
 Guest Room IR|f8:44:77:ff:fe:5a:57:3d|1|57348|2
 ```
 
+### UFO-R11 Example
+
+The UFO-R11 can be added the same way when it is paired through ZHA and exposes the Zosung IR control cluster:
+
+```text
+UFO-R11 Living Room|f8:44:77:ff:fe:5a:57:3d|1|57348|2
+```
+
+Replace `f8:44:77:ff:fe:5a:57:3d` with the IEEE shown for your UFO-R11 device in Home Assistant's ZHA device page.
+
 You can also call the raw service directly:
 
 ```yaml
