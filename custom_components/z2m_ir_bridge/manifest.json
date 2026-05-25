@@ -1,7 +1,7 @@
 {
   "domain": "z2m_ir_bridge",
   "name": "Z2M IR Bridge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "documentation": "https://github.com/tomer2526/IR-Wrapper-for-Zigbee-IR-Bluster",
   "issue_tracker": "https://github.com/tomer2526/IR-Wrapper-for-Zigbee-IR-Bluster/issues",
   "requirements": [],

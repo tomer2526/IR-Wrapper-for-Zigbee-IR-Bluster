@@ -1,0 +1,24 @@
+send_code:
+  fields:
+    friendly_name:
+      required: false
+      selector:
+        text:
+    entity_id:
+      required: false
+      selector:
+        entity:
+          domain: infrared
+    code:
+      required: true
+      selector:
+        text:
+          multiline: true
+    repeat:
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: box

@@ -6,12 +6,20 @@ import json
 import logging
 from typing import Any
 
+import voluptuous as vol
+
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ENTITY_ID
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
+    ATTR_CODE,
+    ATTR_FRIENDLY_NAME,
+    ATTR_REPEAT,
     CONF_BASE_TOPIC,
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_AUTO,
@@ -20,11 +28,22 @@ from .const import (
     DEFAULT_DISCOVERY_PREFIX,
     DOMAIN,
     PLATFORMS,
+    SERVICE_SEND_CODE,
     SIGNAL_NEW_IR_DEVICE,
 )
 from .device_registry import is_ir_device, normalize_device
+from .mqtt import build_payload, build_topic
 
 _LOGGER = logging.getLogger(__name__)
+
+SEND_CODE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_CODE): cv.string,
+        vol.Optional(ATTR_FRIENDLY_NAME): cv.string,
+        vol.Optional(CONF_ENTITY_ID): cv.entity_id,
+        vol.Optional(ATTR_REPEAT, default=1): vol.Coerce(int),
+    }
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -37,6 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
+        "base_topic": base_topic,
         "devices": {},
         "unsub": [],
     }
@@ -114,6 +134,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         [unsub_bridge, unsub_discovery, unsub_discovery_with_node]
     )
 
+    _async_register_services(hass)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -131,6 +153,76 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.pop(DOMAIN, None)
 
     return unload_ok
+
+
+@callback
+def _async_register_services(hass: HomeAssistant) -> None:
+    """Register integration services once."""
+
+    if hass.services.has_service(DOMAIN, SERVICE_SEND_CODE):
+        return
+
+    async def async_send_code(call) -> None:
+        code = call.data[ATTR_CODE]
+        repeat = max(1, call.data[ATTR_REPEAT])
+        friendly_name = call.data.get(ATTR_FRIENDLY_NAME)
+
+        if friendly_name is None and (entity_id := call.data.get(CONF_ENTITY_ID)):
+            friendly_name = _friendly_name_from_entity_id(hass, entity_id)
+
+        if friendly_name is None:
+            raise HomeAssistantError("friendly_name or entity_id is required")
+
+        base_topic = _base_topic_for_device(hass, friendly_name)
+        topic = build_topic(friendly_name, base_topic=base_topic)
+        payload = build_payload(code)
+
+        for _ in range(repeat):
+            await hass.services.async_call(
+                "mqtt",
+                "publish",
+                {
+                    "topic": topic,
+                    "payload": payload,
+                },
+                blocking=True,
+            )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SEND_CODE,
+        async_send_code,
+        schema=SEND_CODE_SCHEMA,
+    )
+
+
+def _base_topic_for_device(hass: HomeAssistant, friendly_name: str) -> str:
+    """Return the base topic for a known device."""
+
+    for data in hass.data.get(DOMAIN, {}).values():
+        if friendly_name in data.get("devices", {}):
+            return data.get("base_topic", DEFAULT_BASE_TOPIC)
+
+    for data in hass.data.get(DOMAIN, {}).values():
+        return data.get("base_topic", DEFAULT_BASE_TOPIC)
+
+    return DEFAULT_BASE_TOPIC
+
+
+def _friendly_name_from_entity_id(hass: HomeAssistant, entity_id: str) -> str | None:
+    """Resolve an integration entity id to a Zigbee2MQTT friendly name."""
+
+    entity_state = hass.states.get(entity_id)
+    entity_name = entity_state.name if entity_state is not None else None
+
+    for data in hass.data.get(DOMAIN, {}).values():
+        for friendly_name in data.get("devices", {}):
+            if entity_id.endswith(friendly_name.lower().replace(" ", "_")):
+                return friendly_name
+            if entity_name in {friendly_name, f"{friendly_name} IR emitter"}:
+                return friendly_name
+
+    return None
 
 
 def _manual_names(value: str | list[str] | tuple[str, ...]) -> set[str]:

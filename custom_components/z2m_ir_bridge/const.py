@@ -14,6 +14,12 @@ CONF_DISCOVERY_PREFIX = "discovery_prefix"
 CONF_ENABLE_AUTO = "enable_auto"
 CONF_MANUAL_FRIENDLY_NAMES = "manual_friendly_names"
 
+ATTR_CODE = "code"
+ATTR_FRIENDLY_NAME = "friendly_name"
+ATTR_REPEAT = "repeat"
+
+SERVICE_SEND_CODE = "send_code"
+
 SIGNAL_NEW_IR_DEVICE = "z2m_ir_bridge_new_ir_device_{}"
 
 IR_MODELS = {
