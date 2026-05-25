@@ -1,6 +1,6 @@
 # Z2M IR Bridge
 
-Home Assistant custom integration that exposes Zigbee2MQTT and ZHA IR emitters, such as ZS06, UFO-R11, and similar Tuya IR blasters, as Home Assistant infrared entities.
+Home Assistant custom integration that exposes Zigbee2MQTT and ZHA IR emitters, such as ZS06, UFO-R11, and similar Zigbee IR blasters, as Home Assistant infrared entities.
 
 ## Installation with HACS
 
