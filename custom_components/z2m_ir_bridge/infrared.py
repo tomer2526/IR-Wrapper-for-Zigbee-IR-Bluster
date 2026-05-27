@@ -27,13 +27,17 @@ async def async_setup_entry(
         if friendly_name in added:
             return
 
+        base_topic = data.get(
+            "base_topic",
+            entry.data.get(CONF_BASE_TOPIC, DEFAULT_BASE_TOPIC),
+        )
         added.add(friendly_name)
         async_add_entities(
             [
                 Z2MInfraredEntity(
                     hass,
                     friendly_name,
-                    entry.data.get(CONF_BASE_TOPIC, DEFAULT_BASE_TOPIC),
+                    base_topic,
                     device,
                 )
             ]

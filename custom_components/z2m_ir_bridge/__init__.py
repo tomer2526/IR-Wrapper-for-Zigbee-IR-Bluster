@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from importlib.util import find_spec
 from typing import Any
 
 import voluptuous as vol
@@ -162,14 +163,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _async_register_services(hass)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    if _infrared_platform_available():
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    else:
+        _LOGGER.warning(
+            "Home Assistant infrared platform is not available; IR entities will "
+            "not be created, but the %s.%s service remains available",
+            DOMAIN,
+            SERVICE_SEND_CODE,
+        )
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = True
+    if _infrared_platform_available():
+        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
     data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, {})
 
     for unsubscribe in data.get("unsub", []):
@@ -179,6 +192,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.pop(DOMAIN, None)
 
     return unload_ok
+
+
+def _infrared_platform_available() -> bool:
+    """Return whether this Home Assistant build includes the infrared platform."""
+
+    return find_spec("homeassistant.components.infrared") is not None
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
