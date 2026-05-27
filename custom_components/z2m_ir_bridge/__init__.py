@@ -78,6 +78,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     manual_zha_devices = _zha_devices(entry_config.get(CONF_ZHA_DEVICES, ""))
 
     hass.data.setdefault(DOMAIN, {})
+    
+    # Clean up old subscriptions if reloading
+    old_data = hass.data[DOMAIN].get(entry.entry_id, {})
+    for unsubscribe in old_data.get("unsub", []):
+        unsubscribe()
+    
+    # Initialize fresh entry data
     hass.data[DOMAIN][entry.entry_id] = {
         "base_topic": base_topic,
         "devices": {},
